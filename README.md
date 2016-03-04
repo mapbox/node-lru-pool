@@ -1,142 +1,97 @@
-# lru cache
+# lru pool
 
-A cache object that deletes the least-recently-used items.
+A keyed pool that recycles the least-recently-used objects. Requires Node.js v0.12.x or greater for [`Symbol`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol) and [`Map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map) types.
 
-[![Build Status](https://travis-ci.org/isaacs/node-lru-cache.svg?branch=master)](https://travis-ci.org/isaacs/node-lru-cache) [![Coverage Status](https://coveralls.io/repos/isaacs/node-lru-cache/badge.svg?service=github)](https://coveralls.io/github/isaacs/node-lru-cache)
+[![Circle CI](https://circleci.com/gh/mapbox/node-lru-pool/tree/master.svg?style=svg)](https://circleci.com/gh/mapbox/node-lru-pool/tree/master) [![Coverage Status](https://coveralls.io/repos/mapbox/node-lru-pool/badge.svg?service=github)](https://coveralls.io/github/mapbox/node-lru-pool)
 
-## Usage:
+## Usage
 
 ```javascript
-var LRU = require("lru-cache")
-  , options = { max: 500
-              , length: function (n, key) { return n * 2 + key.length }
-              , dispose: function (key, n) { n.close() }
-              , maxAge: 1000 * 60 * 60 }
-  , cache = LRU(options)
-  , otherCache = LRU(50) // sets just the max size
+var LRU = require("lru-pool");
+var options = {
+  create: function() {
+    return new Obj();
+  },
+  init: function(key, obj, callback) {
+    obj.load(key);
+    callback(null, obj);
+  },
+  destroy: function(key, obj) {
+    obj.destroy();
+  },
+  max: 500,
+  maxAge: 1000 * 60 * 60,
+  allowStale: true
+};
+var pool = new LRU(options);
 
-cache.set("key", "value")
-cache.get("key") // "value"
+pool.acquire("key", function(err, key, obj) {
+  pool.release(obj);
+  // OR pool.destroy(obj);
+});
 
-// non-string keys ARE fully supported
-var someObject = {}
-cache.set(someObject, 'a value')
-cache.set('[object Object]', 'a different value')
-assert.equal(cache.get(someObject), 'a value')
+// Non-string keys ARE fully supported
+var pool = new LRU({
+  create: function() { return {} },
+  init: function(key, obj, callback) {
+    obj.type = typeof key;
+    callback(null, obj);
+  }
+});
 
-cache.reset()    // empty the cache
+var someObject = {};
+pool.acquire(someObject, function(err, key, obj) {
+  pool.release(obj);
+  
+  pool.acquire('[object Object]', function(err, key, obj) {
+    assert.equal(obj.type, 'string');
+    pool.release(obj);
+    
+    pool.acquire(someObject, function(err, key, obj) {
+      assert.equal(obj.type, 'object');
+    });
+  });
+});
 ```
 
-If you put more stuff in it, then items will fall out.
-
-If you try to put an oversized thing in it, then it'll fall out right
-away.
+If you put more stuff in it, then least recently used objects will be recycled.
 
 ## Options
 
-* `max` The maximum size of the cache, checked by applying the length
-  function to all values in the cache.  Not setting this is kind of
-  silly, since that's the whole purpose of this lib, but it defaults
-  to `Infinity`.
-* `maxAge` Maximum age in ms.  Items are not pro-actively pruned out
-  as they age, but if you try to get an item that is too old, it'll
-  drop it and return undefined instead of giving it to you.
-* `length` Function that is used to calculate the length of stored
-  items.  If you're storing strings or buffers, then you probably want
-  to do something like `function(n, key){return n.length}`.  The default is
-  `function(){return 1}`, which is fine if you want to store `max`
-  like-sized things.  They item is passed as the first argument, and
-  the key is passed as the second argumnet.
-* `dispose` Function that is called on items when they are dropped
-  from the cache.  This can be handy if you want to close file
-  descriptors or do other cleanup tasks when items are no longer
-  accessible.  Called with `key, value`.  It's called *before*
-  actually removing the item from the internal cache, so if you want
-  to immediately put it back in, you'll have to do that in a
-  `nextTick` or `setTimeout` callback or it won't do anything.
-* `stale` By default, if you set a `maxAge`, it'll only actually pull
-  stale items out of the cache when you `get(key)`.  (That is, it's
-  not pre-emptively doing a `setTimeout` or anything.)  If you set
-  `stale:true`, it'll return the stale value before deleting it.  If
-  you don't set this, then it'll return `undefined` when you try to
-  get a stale entry, as if it had already been deleted.
+* `create` **[Required]** Function to construct new objects for the pool.
+
+* `init` **[Optional]** Function called with `key, obj, callback` on objects when they are created or recycled. This can be used to customize an object for the given key. `callback(err)` will pass an error to the `acquire` callback, while `callback(null, obj)` will pass the initialized object through.
+
+* `destroy` **[Optional]** Function called on objects when they are dropped from the pool (with `pool.destroy(obj)` or because they are stale). This can be handy if you want to close file descriptors or do other cleanup tasks when objects are no longer accessible. Called with `key, obj` *after* removing the object from the internal cache.
+
+* `max` **[Optional]** The maximum size of the pool. Not setting this is kind of silly, since that's the whole purpose of this lib, but it defaults to `Infinity`.
+
+* `maxAge` **[Optional]** Maximum age in milliseconds. Objects are not pro-actively pruned out as they age, but if you try to `acquire` an object that is too old, the pool will instead return a newly initialized object.
+
+* `allowStale` **[Optional]** If you try to acquire a stale object, the default behavior is to return a newly initialized object, leaving the stale object in the pool to be recycled. If you set `allowStale: true`, the pool will return the stale object and then recycle it when it is released back to the pool.
+
+* `destroyStale` **[Optional]** The default behavior is to recycle stale objects on `acquire` (unless `allowStale: true` is set) and on `release`. If you set `destroyStale: true`, stale objects will be destroyed instead of being returned to the pool to be recycled.
 
 ## API
 
-* `set(key, value, maxAge)`
-* `get(key) => value`
+* `acquire(key, function(err, key, obj) {})`
 
-    Both of these will update the "recently used"-ness of the key.
-    They do what you think. `maxAge` is optional and overrides the
-    cache `maxAge` option if provided.
+    This will update the "recently used"-ness of the object, unless it is stale.
 
-    If the key is not found, `get()` will return `undefined`.
+    If the key matches an available object, the object will be passed to the callback directly, without passing through the optional `init` function. If the key is not found (no matching objects or all matching objects are busy) and the current size of the pool is smaller than the `max` size, a new object will be created and passed through the `init` function, then passed on to the callback. If the key is not found and the pool is already at max capacity, the least recently used object will be passed through the `init` function then passed to the callback.
+    
+    The acquired object will be flagged as busy and unavailable until it has been released back to the pool.
 
-    The key and val can be any value.
+    The key and object can be any value.
 
-* `peek(key)`
+* `release(obj)`
 
-    Returns the key value (or `undefined` if not found) without
-    updating the "recently used"-ness of the key.
+    Releases the object back to the pool so that it will be available for future calls to `acquire`.
 
-    (If you find yourself using this a lot, you *might* be using the
-    wrong sort of data structure, but there are some use cases where
-    it's handy.)
+* `destroy(obj)`
 
-* `del(key)`
+    Destroys a damaged object instead of releasing it back to the pool.
 
-    Deletes a key out of the cache.
+* `length`
 
-* `reset()`
-
-    Clear the cache entirely, throwing away all values.
-
-* `has(key)`
-
-    Check if a key is in the cache, without updating the recent-ness
-    or deleting it for being stale.
-
-* `forEach(function(value,key,cache), [thisp])`
-
-    Just like `Array.prototype.forEach`.  Iterates over all the keys
-    in the cache, in order of recent-ness.  (Ie, more recently used
-    items are iterated over first.)
-
-* `rforEach(function(value,key,cache), [thisp])`
-
-    The same as `cache.forEach(...)` but items are iterated over in
-    reverse order.  (ie, less recently used items are iterated over
-    first.)
-
-* `keys()`
-
-    Return an array of the keys in the cache.
-
-* `values()`
-
-    Return an array of the values in the cache.
-
-* `length()`
-
-    Return total length of objects in cache taking into account
-    `length` options function.
-
-* `itemCount`
-
-    Return total quantity of objects currently in cache. Note, that
-    `stale` (see options) items are returned as part of this item
-    count.
-
-* `dump()`
-
-    Return an array of the cache entries ready for serialization and usage
-    with 'destinationCache.load(arr)`.
-
-* `load(cacheEntriesArray)`
-
-    Loads another cache entries array, obtained with `sourceCache.dump()`,
-    into the cache. The destination cache is reset before loading new entries
-
-* `prune()`
-
-    Manually iterates over the entire cache proactively pruning old entries
+    Returns total quantity of objects currently in pool. Includes both available and busy objects. Note, that stale (see options) objects are returned as part of this count.

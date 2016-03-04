@@ -1,26 +1,28 @@
 {
-  "name": "lru-cache",
-  "description": "A cache object that deletes the least-recently-used items.",
-  "version": "4.0.0",
-  "author": "Isaac Z. Schlueter <i@izs.me>",
+  "name": "lru-pool",
+  "description": "A keyed pool that recycles the least-recently-used objects.",
+  "version": "0.0.1",
   "keywords": [
     "mru",
     "lru",
-    "cache"
+    "cache",
+    "pool"
   ],
   "scripts": {
-    "test": "tap test --branches=100 --functions=100 --lines=100 --statements=100",
-    "posttest": "standard test/*.js lib/*.js"
+    "pretest": "standard",
+    "test": "tap test --branches=100 --functions=100 --lines=100 --statements=100"
   },
-  "main": "lib/lru-cache.js",
-  "repository": "git://github.com/isaacs/node-lru-cache.git",
+  "main": "lib/lru-pool.js",
+  "repository": "git://github.com/mikemorris/node-lru-pool.git",
   "devDependencies": {
-    "standard": "^5.4.1",
-    "tap": "^5.1.1"
+    "standard": "^6.0.8",
+    "tap": "^5.7.0"
   },
   "license": "ISC",
   "dependencies": {
-    "pseudomap": "^1.0.1",
     "yallist": "^2.0.0"
+  },
+  "engines": {
+    "node": ">= 0.12"
   }
 }
