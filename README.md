@@ -9,8 +9,8 @@ A keyed pool that recycles the least-recently-used objects. Requires Node.js v0.
 ```javascript
 var LRU = require("lru-pool");
 var options = {
-  create: function() {
-    return new Obj();
+  create: function(callback) {
+    callback(null, new Object());
   },
   init: function(key, obj, callback) {
     obj.load(key);
@@ -21,7 +21,8 @@ var options = {
   },
   max: 500,
   maxAge: 1000 * 60 * 60,
-  allowStale: true
+  allowStale: true,
+  destroyStale: true
 };
 var pool = new LRU(options);
 
@@ -32,7 +33,7 @@ pool.acquire("key", function(err, key, obj) {
 
 // Non-string keys ARE fully supported
 var pool = new LRU({
-  create: function() { return {} },
+  create: function(callback) { callback(null, {}) },
   init: function(key, obj, callback) {
     obj.type = typeof key;
     callback(null, obj);
@@ -58,7 +59,7 @@ If you put more stuff in it, then least recently used objects will be recycled.
 
 ## Options
 
-* `create` **[Required]** Function to construct new objects for the pool.
+* `create` **[Required]** Function to construct new objects for the pool. Pass the constructed object to the callback in `err, obj` form.
 
 * `init` **[Optional]** Function called with `key, obj, callback` on objects when they are created or recycled. This can be used to customize an object for the given key. `callback(err)` will pass an error to the `acquire` callback, while `callback(null, obj)` will pass the initialized object through.
 

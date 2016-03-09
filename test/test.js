@@ -47,7 +47,7 @@ test('acquire', function (t) {
 
 test('create', function (t) {
   var pool = new LRU({
-    create: function () { return 'obj' },
+    create: function (cb) { cb(null, 'obj') },
     max: 10
   })
 
@@ -60,9 +60,25 @@ test('create', function (t) {
   })
 })
 
+test('create error', function (t) {
+  var error = new Error('create failed')
+
+  var pool = new LRU({
+    create: function (cb) { cb(error) }
+  })
+
+  pool.acquire('key', function (err, key, obj) {
+    t.equal(err, error)
+    t.equal(key, undefined)
+    t.equal(obj, undefined)
+    t.equal(pool.length, 0)
+    t.end()
+  })
+})
+
 test('create with non-string key', function (t) {
   var pool = new LRU({
-    create: function () { return {} },
+    create: function (cb) { cb(null, {}) },
     init: function (key, obj, cb) {
       obj.type = typeof key
       cb(null, obj)
@@ -88,9 +104,26 @@ test('create with non-string key', function (t) {
   })
 })
 
+test('init error', function (t) {
+  var error = new Error('init failed')
+
+  var pool = new LRU({
+    create: function (cb) { cb(null, {}) },
+    init: function (key, obj, cb) { cb(error) }
+  })
+
+  pool.acquire('key', function (err, key, obj) {
+    t.equal(err, error)
+    t.equal(key, undefined)
+    t.equal(obj, undefined)
+    t.equal(pool.length, 1)
+    t.end()
+  })
+})
+
 test('init pass by value - string', function (t) {
   var pool = new LRU({
-    create: function () { return '' },
+    create: function (cb) { cb(null, '') },
     init: function (key, obj, cb) {
       cb(null, key.toUpperCase())
     },
@@ -106,7 +139,7 @@ test('init pass by value - string', function (t) {
 
 test('init pass by value - number', function (t) {
   var pool = new LRU({
-    create: function () { return 0 },
+    create: function (cb) { cb(null, 0) },
     init: function (key, obj, cb) {
       cb(null, 1)
     },
@@ -123,7 +156,7 @@ test('init pass by value - number', function (t) {
 test('least recently used', function (t) {
   var i = 0
   var pool = new LRU({
-    create: function () { return {} },
+    create: function (cb) { cb(null, {}) },
     init: function (key, obj, cb) {
       if (i++ < 2) {
         obj.name = key.toUpperCase()
@@ -154,7 +187,7 @@ test('least recently used', function (t) {
 test('most recently released', function (t) {
   var i = 0
   var pool = new LRU({
-    create: function () { return {} },
+    create: function (cb) { cb(null, {}) },
     init: function (key, obj, cb) {
       obj.val = ++i
       cb(null, obj)
@@ -183,7 +216,7 @@ test('most recently released', function (t) {
 test('reinitialize recycled object', function (t) {
   var i = 0
   var pool = new LRU({
-    create: function () { return {} },
+    create: function (cb) { cb(null, {}) },
     init: function (key, obj, cb) {
       obj.val = ++i
       cb(null, obj)
@@ -214,7 +247,7 @@ test('destroy', function (t) {
   var destroyed = []
 
   var pool = new LRU({
-    create: function () { return {} },
+    create: function (cb) { cb(null, {}) },
     init: function (key, obj, cb) {
       obj.val = ++i
       cb(null, obj)
@@ -244,7 +277,7 @@ test('destroy (without destroy)', function (t) {
   var i = 0
 
   var pool = new LRU({
-    create: function () { return {} },
+    create: function (cb) { cb(null, {}) },
     init: function (key, obj, cb) {
       obj.val = ++i
       cb(null, obj)
@@ -267,7 +300,7 @@ test('destroy (without destroy)', function (t) {
 
 test('max resize smaller', function (t) {
   var pool = new LRU({
-    create: function () { return {} },
+    create: function (cb) { cb(null, {}) },
     max: 3
   })
 
@@ -287,7 +320,7 @@ test('max resize smaller', function (t) {
 
 test('max resize larger', function (t) {
   var pool = new LRU({
-    create: function () { return {} },
+    create: function (cb) { cb(null, {}) },
     max: 1
   })
 
@@ -310,7 +343,7 @@ test('trim', function (t) {
   var destroyed = []
 
   var pool = new LRU({
-    create: function () { return {} },
+    create: function (cb) { cb(null, {}) },
     destroy: function (key, obj) {
       destroyed.push([key, obj])
     },
@@ -340,7 +373,7 @@ test('trim', function (t) {
 
 test('trim (without destroy)', function (t) {
   var pool = new LRU({
-    create: function () { return {} },
+    create: function (cb) { cb(null, {}) },
     max: 3
   })
 
@@ -366,7 +399,7 @@ test('trim (without destroy)', function (t) {
 test('maxAge', function (t) {
   var i = 0
   var pool = new LRU({
-    create: function () { return {} },
+    create: function (cb) { cb(null, {}) },
     init: function (key, obj, cb) {
       obj.val = ++i
       cb(null, obj)
@@ -395,7 +428,7 @@ test('maxAge', function (t) {
 test('maxAge set lower', function (t) {
   var i = 0
   var pool = new LRU({
-    create: function () { return {} },
+    create: function (cb) { cb(null, {}) },
     init: function (key, obj, cb) {
       obj.val = ++i
       cb(null, obj)
@@ -422,7 +455,7 @@ test('maxAge set lower', function (t) {
 test('maxAge set higher', function (t) {
   var i = 0
   var pool = new LRU({
-    create: function () { return {} },
+    create: function (cb) { cb(null, {}) },
     init: function (key, obj, cb) {
       obj.val = ++i
       cb(null, obj)
@@ -454,7 +487,7 @@ test('stale objects are recycled on acquire', function (t) {
   var destroyed = 0
 
   var pool = new LRU({
-    create: function () { return {} },
+    create: function (cb) { cb(null, {}) },
     init: function (key, obj, cb) {
       obj.val = ++i
       cb(null, obj)
@@ -484,7 +517,7 @@ test('stale objects are destroyed on acquire', function (t) {
   var destroyed = []
 
   var pool = new LRU({
-    create: function () { return {} },
+    create: function (cb) { cb(null, {}) },
     init: function (key, obj, cb) {
       obj.val = ++i
       cb(null, obj)
@@ -517,7 +550,7 @@ test('newly stale objects are recycled on release', function (t) {
   var destroyed = 0
 
   var pool = new LRU({
-    create: function () { return {} },
+    create: function (cb) { cb(null, {}) },
     init: function (key, obj, cb) {
       obj.val = ++i
       cb(null, obj)
@@ -547,7 +580,7 @@ test('newly stale objects are destroyed on release', function (t) {
   var destroyed = []
 
   var pool = new LRU({
-    create: function () { return {} },
+    create: function (cb) { cb(null, {}) },
     init: function (key, obj, cb) {
       obj.val = ++i
       cb(null, obj)
@@ -582,7 +615,7 @@ test('acquired stale objects recycled on release', function (t) {
   var destroyed = 0
 
   var pool = new LRU({
-    create: function () { return {} },
+    create: function (cb) { cb(null, {}) },
     init: function (key, obj, cb) {
       obj.val = ++i
       cb(null, obj)
@@ -625,7 +658,7 @@ test('acquired stale objects destroyed on release', function (t) {
   var destroyed = []
 
   var pool = new LRU({
-    create: function () { return {} },
+    create: function (cb) { cb(null, {}) },
     init: function (key, obj, cb) {
       obj.val = ++i
       cb(null, obj)
@@ -668,7 +701,7 @@ test('acquired stale objects destroyed on release (without destroy)', function (
   var i = 0
 
   var pool = new LRU({
-    create: function () { return {} },
+    create: function (cb) { cb(null, {}) },
     init: function (key, obj, cb) {
       obj.val = ++i
       cb(null, obj)
@@ -705,7 +738,7 @@ test('acquired stale objects destroyed on release (without destroy)', function (
 test('set allowStale', function (t) {
   var i = 0
   var pool = new LRU({
-    create: function () { return {} },
+    create: function (cb) { cb(null, {}) },
     init: function (key, obj, cb) {
       obj.val = ++i
       cb(null, obj)
@@ -742,7 +775,7 @@ test('update cache pointer', function (t) {
   var i = 0
 
   var pool = new LRU({
-    create: function () { return {} },
+    create: function (cb) { cb(null, {}) },
     init: function (key, obj, cb) {
       obj.val = ++i
       cb(null, obj)
@@ -787,7 +820,7 @@ test('cache pointer not updated to stale items', function (t) {
   var i = 0
 
   var pool = new LRU({
-    create: function () { return {} },
+    create: function (cb) { cb(null, {}) },
     init: function (key, obj, cb) {
       obj.val = ++i
       cb(null, obj)
@@ -833,7 +866,7 @@ test('cache pointer not updated to stale items', function (t) {
 
 test('releasing objects not in pool has no effect', function (t) {
   var pool = new LRU({
-    create: function () { return {} }
+    create: function (cb) { cb(null, {}) }
   })
 
   pool.acquire('a', function (err, key, obj) {
@@ -856,7 +889,7 @@ test('releasing objects not in pool has no effect', function (t) {
 test('destroying objects not in pool has no effect', function (t) {
   var i = 0
   var pool = new LRU({
-    create: function () { return {} },
+    create: function (cb) { cb(null, {}) },
     init: function (key, obj, cb) {
       obj.val = ++i
       cb(null, obj)
