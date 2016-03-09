@@ -211,7 +211,7 @@ test('reinitialize recycled object', function (t) {
 
 test('destroy', function (t) {
   var i = 0
-  var destroyed = 0
+  var destroyed = []
 
   var pool = new LRU({
     create: function () { return {} },
@@ -219,18 +219,21 @@ test('destroy', function (t) {
       obj.val = ++i
       cb(null, obj)
     },
-    destroy: function (obj) { ++destroyed },
+    destroy: function (key, obj) {
+      destroyed.push([key, obj])
+    },
     max: 1
   })
 
-  pool.acquire('a', function (err, key, obj) {
+  pool.acquire('a', function (err, key, a) {
     if (err) throw err
-    pool.destroy(obj)
+    pool.destroy(a)
 
-    pool.acquire('a', function (err, key, obj) {
+    pool.acquire('a', function (err, key, b) {
       if (err) throw err
-      t.equal(obj.val, 2)
-      t.equal(destroyed, 1)
+      t.equal(b.val, 2)
+      t.equal(destroyed.length, 1)
+      t.deepEqual(destroyed, [['a', a]])
       t.equal(pool.length, 1)
       t.end()
     })
@@ -304,27 +307,31 @@ test('max resize larger', function (t) {
 })
 
 test('trim', function (t) {
-  var destroyed = 0
+  var destroyed = []
+
   var pool = new LRU({
     create: function () { return {} },
-    destroy: function () { ++destroyed },
+    destroy: function (key, obj) {
+      destroyed.push([key, obj])
+    },
     max: 3
   })
 
   // Test changing the max, verify that LRU objects are not dropped.
-  pool.acquire('a', function (err, key, obj) {
+  pool.acquire('a', function (err, key, a) {
     if (err) throw err
-    pool.release(obj)
+    pool.release(a)
 
-    pool.acquire('b', function (err, key, obj) {
+    pool.acquire('b', function (err, key, b) {
       if (err) throw err
-      pool.release(obj)
+      pool.release(b)
 
-      pool.acquire('c', function (err, key, obj) {
+      pool.acquire('c', function (err, key, c) {
         if (err) throw err
         pool.max = 1
         t.equal(pool.length, 1)
-        t.equal(destroyed, 2)
+        t.equal(destroyed.length, 2)
+        t.deepEqual(destroyed, [['a', a], ['b', b]])
         t.end()
       })
     })
@@ -473,7 +480,7 @@ test('stale objects are recycled on acquire', function (t) {
 
 test('stale objects are destroyed on acquire', function (t) {
   var i = 0
-  var destroyed = 0
+  var destroyed = []
 
   var pool = new LRU({
     create: function () { return {} },
@@ -481,20 +488,23 @@ test('stale objects are destroyed on acquire', function (t) {
       obj.val = ++i
       cb(null, obj)
     },
-    destroy: function () { ++destroyed },
+    destroy: function (key, obj) {
+      destroyed.push([key, obj])
+    },
     maxAge: 10
   })
 
-  pool.acquire('a', function (err, key, obj) {
+  pool.acquire('a', function (err, key, a) {
     if (err) throw err
-    pool.release(obj)
+    pool.release(a)
     pool.destroyStale = true
 
     setTimeout(function () {
-      pool.acquire('a', function (err, key, obj) {
+      pool.acquire('a', function (err, key, b) {
         if (err) throw err
-        t.equal(obj.val, 2)
-        t.equal(destroyed, 1)
+        t.equal(b.val, 2)
+        t.equal(destroyed.length, 1)
+        t.deepEqual(destroyed, [['a', a]])
         t.end()
       })
     }, 20)
@@ -533,7 +543,7 @@ test('newly stale objects are recycled on release', function (t) {
 
 test('newly stale objects are destroyed on release', function (t) {
   var i = 0
-  var destroyed = 0
+  var destroyed = []
 
   var pool = new LRU({
     create: function () { return {} },
@@ -541,22 +551,25 @@ test('newly stale objects are destroyed on release', function (t) {
       obj.val = ++i
       cb(null, obj)
     },
-    destroy: function () { ++destroyed },
+    destroy: function (key, obj) {
+      destroyed.push([key, obj])
+    },
     maxAge: 10,
     destroyStale: true
   })
 
   t.equal(pool.destroyStale, true)
 
-  pool.acquire('a', function (err, key, obj) {
+  pool.acquire('a', function (err, key, a) {
     if (err) throw err
 
     setTimeout(function () {
-      pool.release(obj)
-      pool.acquire('a', function (err, key, obj) {
+      pool.release(a)
+      pool.acquire('a', function (err, key, b) {
         if (err) throw err
-        t.equal(obj.val, 2)
-        t.equal(destroyed, 1)
+        t.equal(b.val, 2)
+        t.equal(destroyed.length, 1)
+        t.deepEqual(destroyed, [['a', a]])
         t.end()
       })
     }, 20)
@@ -608,7 +621,7 @@ test('acquired stale objects recycled on release', function (t) {
 
 test('acquired stale objects destroyed on release', function (t) {
   var i = 0
-  var destroyed = 0
+  var destroyed = []
 
   var pool = new LRU({
     create: function () { return {} },
@@ -616,7 +629,9 @@ test('acquired stale objects destroyed on release', function (t) {
       obj.val = ++i
       cb(null, obj)
     },
-    destroy: function () { ++destroyed },
+    destroy: function (key, obj) {
+      destroyed.push([key, obj])
+    },
     maxAge: 10,
     allowStale: true,
     destroyStale: true
@@ -627,19 +642,20 @@ test('acquired stale objects destroyed on release', function (t) {
     pool.release(obj)
 
     setTimeout(function () {
-      pool.acquire('a', function (err, key, obj) {
+      pool.acquire('a', function (err, key, a) {
         if (err) throw err
 
         // Stale object returned
         t.equal(obj.val, 1)
-        pool.release(obj)
+        pool.release(a)
 
-        pool.acquire('a', function (err, key, obj) {
+        pool.acquire('a', function (err, key, b) {
           if (err) throw err
 
           // Stale object has been destroyed, new object created
-          t.equal(obj.val, 2)
-          t.equal(destroyed, 1)
+          t.equal(b.val, 2)
+          t.equal(destroyed.length, 1)
+          t.deepEqual(destroyed, [['a', a]])
           t.end()
         })
       })
@@ -843,7 +859,7 @@ test('destroying objects not in pool has no effect', function (t) {
       obj.val = ++i
       cb(null, obj)
     },
-    destroy: function (obj) { obj.val = 'Z' }
+    destroy: function (key, obj) { obj.val = 'Z' }
   })
 
   pool.acquire('a', function (err, key, obj) {
