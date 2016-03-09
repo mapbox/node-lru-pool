@@ -2,7 +2,7 @@
 
 A keyed pool that recycles the least-recently-used objects. Requires Node.js v0.12.x or greater for [`Symbol`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Symbol) and [`Map`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map) types.
 
-[![Circle CI](https://circleci.com/gh/mapbox/node-lru-pool/tree/master.svg?style=svg)](https://circleci.com/gh/mapbox/node-lru-pool/tree/master) [![Coverage Status](https://coveralls.io/repos/mapbox/node-lru-pool/badge.svg?service=github)](https://coveralls.io/github/mapbox/node-lru-pool)
+[![Circle CI](https://circleci.com/gh/mapbox/node-lru-pool/tree/master.svg?style=svg)](https://circleci.com/gh/mapbox/node-lru-pool/tree/master) [![codecov.io](https://codecov.io/github/mapbox/node-lru-pool/coverage.svg?branch=master)](https://codecov.io/github/mapbox/node-lru-pool?branch=master)
 
 ## Usage
 
