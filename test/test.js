@@ -71,16 +71,16 @@ test('create with non-string key', function (t) {
 
   var someObject = {}
   pool.acquire(someObject, function (err, key, obj) {
-    if (err) throw err
+    t.error(err)
     pool.release(obj)
 
     pool.acquire('[object Object]', function (err, key, obj) {
-      if (err) throw err
+      t.error(err)
       t.equal(obj.type, 'string')
       pool.release(obj)
 
       pool.acquire(someObject, function (err, key, obj) {
-        if (err) throw err
+        t.error(err)
         t.equal(obj.type, 'object')
         t.end()
       })
@@ -98,7 +98,7 @@ test('init pass by value - string', function (t) {
   })
 
   pool.acquire('a', function (err, key, obj) {
-    if (err) throw err
+    t.error(err)
     t.equal(obj, 'A')
     t.end()
   })
@@ -114,7 +114,7 @@ test('init pass by value - number', function (t) {
   })
 
   pool.acquire('a', function (err, key, obj) {
-    if (err) throw err
+    t.error(err)
     t.equal(obj, 1)
     t.end()
   })
@@ -134,15 +134,15 @@ test('least recently used', function (t) {
   })
 
   pool.acquire('a', function (err, key, obj) {
-    if (err) throw err
+    t.error(err)
     pool.release(obj)
 
     pool.acquire('b', function (err, key, obj) {
-      if (err) throw err
+      t.error(err)
       pool.release(obj)
 
       pool.acquire('c', function (err, key, obj) {
-        if (err) throw err
+        t.error(err)
         t.equal(obj.name, 'A')
         t.equal(pool.length, 2)
         t.end()
@@ -163,15 +163,15 @@ test('most recently released', function (t) {
   })
 
   pool.acquire('a', function (err, key, obj) {
-    if (err) throw err
+    t.error(err)
     pool.release(obj)
 
     pool.acquire('b', function (err, key, obj) {
-      if (err) throw err
+      t.error(err)
       pool.release(obj)
 
       pool.acquire('a', function (err, key, obj) {
-        if (err) throw err
+        t.error(err)
         t.equal(obj.val, 1)
         t.equal(pool.length, 2)
         t.end()
@@ -192,15 +192,15 @@ test('reinitialize recycled object', function (t) {
   })
 
   pool.acquire('a', function (err, key, obj) {
-    if (err) throw err
+    t.error(err)
     pool.release(obj)
 
     pool.acquire('b', function (err, key, obj) {
-      if (err) throw err
+      t.error(err)
       pool.release(obj)
 
       pool.acquire('c', function (err, key, obj) {
-        if (err) throw err
+        t.error(err)
         t.equal(obj.val, 3)
         t.equal(pool.length, 2)
         t.end()
@@ -226,11 +226,11 @@ test('destroy', function (t) {
   })
 
   pool.acquire('a', function (err, key, a) {
-    if (err) throw err
+    t.error(err)
     pool.destroy(a)
 
     pool.acquire('a', function (err, key, b) {
-      if (err) throw err
+      t.error(err)
       t.equal(b.val, 2)
       t.equal(destroyed.length, 1)
       t.deepEqual(destroyed, [['a', a]])
@@ -253,11 +253,11 @@ test('destroy (without destroy)', function (t) {
   })
 
   pool.acquire('a', function (err, key, obj) {
-    if (err) throw err
+    t.error(err)
     pool.destroy(obj)
 
     pool.acquire('a', function (err, key, obj) {
-      if (err) throw err
+      t.error(err)
       t.equal(obj.val, 2)
       t.equal(pool.length, 1)
       t.end()
@@ -274,11 +274,11 @@ test('max resize smaller', function (t) {
   // Test changing the max, verify that the LRU objects get dropped.
   pool.max = 1
   pool.acquire('a', function (err, key, obj) {
-    if (err) throw err
+    t.error(err)
     pool.release(obj)
 
     pool.acquire('b', function (err, key, obj) {
-      if (err) throw err
+      t.error(err)
       t.equal(pool.length, 1)
       t.end()
     })
@@ -295,11 +295,11 @@ test('max resize larger', function (t) {
   // dropped.
   pool.max = 'hello'
   pool.acquire('a', function (err, key, obj) {
-    if (err) throw err
+    t.error(err)
     pool.release(obj)
 
     pool.acquire('b', function (err, key, obj) {
-      if (err) throw err
+      t.error(err)
       t.equal(pool.length, 2)
       t.end()
     })
@@ -319,15 +319,15 @@ test('trim', function (t) {
 
   // Test changing the max, verify that LRU objects are not dropped.
   pool.acquire('a', function (err, key, a) {
-    if (err) throw err
+    t.error(err)
     pool.release(a)
 
     pool.acquire('b', function (err, key, b) {
-      if (err) throw err
+      t.error(err)
       pool.release(b)
 
       pool.acquire('c', function (err, key, c) {
-        if (err) throw err
+        t.error(err)
         pool.max = 1
         t.equal(pool.length, 1)
         t.equal(destroyed.length, 2)
@@ -346,15 +346,15 @@ test('trim (without destroy)', function (t) {
 
   // Test changing the max, verify that LRU objects are not dropped.
   pool.acquire('a', function (err, key, obj) {
-    if (err) throw err
+    t.error(err)
     pool.release(obj)
 
     pool.acquire('b', function (err, key, obj) {
-      if (err) throw err
+      t.error(err)
       pool.release(obj)
 
       pool.acquire('c', function (err, key, obj) {
-        if (err) throw err
+        t.error(err)
         pool.max = 1
         t.equal(pool.length, 1)
         t.end()
@@ -377,12 +377,13 @@ test('maxAge', function (t) {
   t.equal(pool.maxAge, 10)
 
   pool.acquire('a', function (err, key, obj) {
-    if (err) throw err
+    t.error(err)
     pool.release(obj)
 
     setTimeout(function () {
       pool.acquire('a', function (err, key, obj) {
-        if (err) throw err
+        t.error(err)
+
         // Original object timed out
         t.equal(obj.val, 2)
         t.end()
@@ -402,13 +403,13 @@ test('maxAge set lower', function (t) {
   })
 
   pool.acquire('a', function (err, key, obj) {
-    if (err) throw err
+    t.error(err)
     pool.maxAge = 10
     pool.release(obj)
 
     setTimeout(function () {
       pool.acquire('a', function (err, key, obj) {
-        if (err) throw err
+        t.error(err)
 
         // Original object timed out
         t.equal(obj.val, 2)
@@ -433,12 +434,12 @@ test('maxAge set higher', function (t) {
   pool.maxAge = 'hello'
 
   pool.acquire('a', function (err, key, obj) {
-    if (err) throw err
+    t.error(err)
     pool.release(obj)
 
     setTimeout(function () {
       pool.acquire('a', function (err, key, obj) {
-        if (err) throw err
+        t.error(err)
 
         // Original object does not time out
         t.equal(obj.val, 1)
@@ -464,12 +465,12 @@ test('stale objects are recycled on acquire', function (t) {
   })
 
   pool.acquire('a', function (err, key, obj) {
-    if (err) throw err
+    t.error(err)
     pool.release(obj)
 
     setTimeout(function () {
       pool.acquire('a', function (err, key, obj) {
-        if (err) throw err
+        t.error(err)
         t.equal(obj.val, 2)
         t.equal(destroyed, 0)
         t.end()
@@ -495,13 +496,13 @@ test('stale objects are destroyed on acquire', function (t) {
   })
 
   pool.acquire('a', function (err, key, a) {
-    if (err) throw err
+    t.error(err)
     pool.release(a)
     pool.destroyStale = true
 
     setTimeout(function () {
       pool.acquire('a', function (err, key, b) {
-        if (err) throw err
+        t.error(err)
         t.equal(b.val, 2)
         t.equal(destroyed.length, 1)
         t.deepEqual(destroyed, [['a', a]])
@@ -527,12 +528,12 @@ test('newly stale objects are recycled on release', function (t) {
   })
 
   pool.acquire('a', function (err, key, obj) {
-    if (err) throw err
+    t.error(err)
 
     setTimeout(function () {
       pool.release(obj)
       pool.acquire('a', function (err, key, obj) {
-        if (err) throw err
+        t.error(err)
         t.equal(obj.val, 2)
         t.equal(destroyed, 0)
         t.end()
@@ -561,12 +562,12 @@ test('newly stale objects are destroyed on release', function (t) {
   t.equal(pool.destroyStale, true)
 
   pool.acquire('a', function (err, key, a) {
-    if (err) throw err
+    t.error(err)
 
     setTimeout(function () {
       pool.release(a)
       pool.acquire('a', function (err, key, b) {
-        if (err) throw err
+        t.error(err)
         t.equal(b.val, 2)
         t.equal(destroyed.length, 1)
         t.deepEqual(destroyed, [['a', a]])
@@ -595,19 +596,19 @@ test('acquired stale objects recycled on release', function (t) {
   t.equal(pool.allowStale, true)
 
   pool.acquire('a', function (err, key, obj) {
-    if (err) throw err
+    t.error(err)
     pool.release(obj)
 
     setTimeout(function () {
       pool.acquire('a', function (err, key, obj) {
-        if (err) throw err
+        t.error(err)
 
         // Stale object returned
         t.equal(obj.val, 1)
         pool.release(obj)
 
         pool.acquire('a', function (err, key, obj) {
-          if (err) throw err
+          t.error(err)
 
           // Stale object has been recycled
           t.equal(obj.val, 2)
@@ -638,19 +639,19 @@ test('acquired stale objects destroyed on release', function (t) {
   })
 
   pool.acquire('a', function (err, key, obj) {
-    if (err) throw err
+    t.error(err)
     pool.release(obj)
 
     setTimeout(function () {
       pool.acquire('a', function (err, key, a) {
-        if (err) throw err
+        t.error(err)
 
         // Stale object returned
         t.equal(obj.val, 1)
         pool.release(a)
 
         pool.acquire('a', function (err, key, b) {
-          if (err) throw err
+          t.error(err)
 
           // Stale object has been destroyed, new object created
           t.equal(b.val, 2)
@@ -678,19 +679,19 @@ test('acquired stale objects destroyed on release (without destroy)', function (
   })
 
   pool.acquire('a', function (err, key, obj) {
-    if (err) throw err
+    t.error(err)
     pool.release(obj)
 
     setTimeout(function () {
       pool.acquire('a', function (err, key, obj) {
-        if (err) throw err
+        t.error(err)
 
         // Stale object returned
         t.equal(obj.val, 1)
         pool.release(obj)
 
         pool.acquire('a', function (err, key, obj) {
-          if (err) throw err
+          t.error(err)
 
           // Stale object has been removed, new object created
           t.equal(obj.val, 2)
@@ -713,20 +714,20 @@ test('set allowStale', function (t) {
   })
 
   pool.acquire('a', function (err, key, obj) {
-    if (err) throw err
+    t.error(err)
     pool.release(obj)
     pool.allowStale = true
 
     setTimeout(function () {
       pool.acquire('a', function (err, key, obj) {
-        if (err) throw err
+        t.error(err)
 
         // Stale object returned
         t.equal(obj.val, 1)
         pool.release(obj)
 
         pool.acquire('a', function (err, key, obj) {
-          if (err) throw err
+          t.error(err)
 
           // Stale object has been removed, new object created
           t.equal(obj.val, 2)
@@ -751,10 +752,10 @@ test('update cache pointer', function (t) {
   })
 
   pool.acquire('a', function (err, key, first) {
-    if (err) throw err
+    t.error(err)
 
     pool.acquire('a', function (err, key, second) {
-      if (err) throw err
+      t.error(err)
 
       // New object returned
       t.equal(second.val, 2)
@@ -763,13 +764,13 @@ test('update cache pointer', function (t) {
       pool.release(second)
 
       pool.acquire('a', function (err, key, obj) {
-        if (err) throw err
+        t.error(err)
 
         // Most recently used object returned
         t.equal(obj.val, 2)
 
         pool.acquire('a', function (err, key, obj) {
-          if (err) throw err
+          t.error(err)
 
           // Cache pointer updated
           // Second most recently used object returned
@@ -797,10 +798,10 @@ test('cache pointer not updated to stale items', function (t) {
   })
 
   pool.acquire('a', function (err, key, first) {
-    if (err) throw err
+    t.error(err)
 
     pool.acquire('a', function (err, key, second) {
-      if (err) throw err
+      t.error(err)
 
       // New object returned
       t.equal(second.val, 2)
@@ -810,13 +811,13 @@ test('cache pointer not updated to stale items', function (t) {
 
       setTimeout(function () {
         pool.acquire('a', function (err, key, obj) {
-          if (err) throw err
+          t.error(err)
 
           // Most recent stale object returned
           t.equal(obj.val, 2)
 
           pool.acquire('a', function (err, key, obj) {
-            if (err) throw err
+            t.error(err)
 
             // Cache pointer to second stale object removed,
             // Stale object has been recycled
@@ -836,7 +837,8 @@ test('releasing objects not in pool has no effect', function (t) {
   })
 
   pool.acquire('a', function (err, key, obj) {
-    if (err) throw err
+    t.error(err)
+
     var b = { val: 'B' }
 
     t.doesNotThrow(function () {
@@ -863,7 +865,8 @@ test('destroying objects not in pool has no effect', function (t) {
   })
 
   pool.acquire('a', function (err, key, obj) {
-    if (err) throw err
+    t.error(err)
+
     var b = { val: 'B' }
 
     t.doesNotThrow(function () {
@@ -873,7 +876,7 @@ test('destroying objects not in pool has no effect', function (t) {
     pool.destroy(obj)
 
     pool.acquire('a', function (err, key, obj) {
-      if (err) throw err
+      t.error(err)
       t.equal(obj.val, 2)
       t.equal(b.val, 'B')
       t.equal(pool.length, 1)
