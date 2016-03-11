@@ -33,7 +33,7 @@ test('auto new', function (t) {
   t.end()
 })
 
-test('acquire', function (t) {
+test('acquire error', function (t) {
   var pool = new LRU({
     create: function () {}
   })
@@ -41,6 +41,18 @@ test('acquire', function (t) {
   t.throws(function () {
     pool.acquire('key', 'obj')
   }, 'Callback must be a function')
+
+  t.end()
+})
+
+test('acquireOnce error', function (t) {
+  var pool = new LRU({
+    create: function () {}
+  })
+
+  t.throws(function () {
+    pool.acquireOnce('key', 'obj')
+  }, /Callback must be a function/)
 
   t.end()
 })
@@ -238,6 +250,34 @@ test('reinitialize recycled object', function (t) {
         t.equal(pool.length, 2)
         t.end()
       })
+    })
+  })
+})
+
+test('acquireOnce', function (t) {
+  var i = 0
+
+  var pool = new LRU({
+    create: function (cb) { cb(null, {}) },
+    init: function (key, obj, cb) {
+      obj.val = ++i
+      cb(null, obj)
+    }
+  })
+
+  pool.acquireOnce('a', function (err, key, obj) {
+    t.error(err)
+
+    t.equal(obj.val, 1)
+    pool.release(obj)
+
+    pool.acquire('a', function (err, key, obj) {
+      t.error(err)
+
+      t.equal(obj.val, 2)
+      t.equal(pool.length, 2)
+
+      t.end()
     })
   })
 })
