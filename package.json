@@ -1,7 +1,7 @@
 {
   "name": "lru-pool",
   "description": "A keyed pool that recycles the least-recently-used objects.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "keywords": [
     "mru",
     "lru",
@@ -12,8 +12,9 @@
     "pretest": "standard",
     "test": "tap test --branches=100 --functions=100 --lines=100 --statements=100"
   },
+  "author": "Mapbox",
   "main": "lib/lru-pool.js",
-  "repository": "git://github.com/mikemorris/node-lru-pool.git",
+  "repository": "git://github.com/mapbox/node-lru-pool.git",
   "devDependencies": {
     "standard": "^6.0.8",
     "tap": "^5.7.0"
