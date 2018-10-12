@@ -31,6 +31,10 @@ pool.acquire("key", function(err, key, obj) {
   // OR pool.destroy(obj);
 });
 
+pool.acquireOnce("tmp", function(err, key, obj) {
+  pool.release(obj);
+});
+
 // Non-string keys ARE fully supported
 var pool = new LRU({
   create: function(callback) { callback(null, {}) },
@@ -61,6 +65,8 @@ If you put more stuff in it, then least recently used objects will be recycled.
 
 * `create` **[Required]** Function to construct new objects for the pool. Pass the constructed object to the callback in `err, obj` form.
 
+  The object can be any value.
+
 * `init` **[Optional]** Function called with `key, obj, callback` on objects when they are created or recycled. This can be used to customize an object for the given key. `callback(err)` will pass an error to the `acquire` callback, while `callback(null, obj)` will pass the initialized object through.
 
 * `destroy` **[Optional]** Function called on objects when they are dropped from the pool (with `pool.destroy(obj)` or because they are stale). This can be handy if you want to close file descriptors or do other cleanup tasks when objects are no longer accessible. Called with `key, obj` *after* removing the object from the internal cache.
@@ -83,7 +89,11 @@ If you put more stuff in it, then least recently used objects will be recycled.
     
     The acquired object will be flagged as busy and unavailable until it has been released back to the pool.
 
-    The key and object can be any value.
+    The key can be any value.
+
+* `acquireOnce(key, function(err, key, obj) {})`
+
+   This will bypass the internal cache and instead create a new object (if the pool is below max capacity) or recycle the least recently used object in the pool, passing it through the optional `init` function, then on to the callback. Objects acquired in this way will be flagged as expired during acquisition, so they will never be added to the internal cache or returned by calls to `acquire`.
 
 * `release(obj)`
 

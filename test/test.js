@@ -4,7 +4,8 @@ var test = require('tap').test
 var LRU = require('../')
 
 test('constructor', function (t) {
-  var err = new Error("Must provide a 'create' function")
+  var err = /Must provide a 'create' function/
+
   t.throws(function () { LRU() }, err)
   t.throws(function () { LRU('') }, err)
   t.throws(function () { LRU({}) }, err)
@@ -16,14 +17,14 @@ test('constructor', function (t) {
       create: function () {},
       init: null
     })
-  }, "'init' must be a function")
+  }, /'init' must be a function/)
 
   t.throws(function () {
     LRU({
       create: function () {},
       destroy: undefined
     })
-  }, "'destroy' must be a function")
+  }, /'destroy' must be a function/)
 
   t.end()
 })
@@ -33,14 +34,26 @@ test('auto new', function (t) {
   t.end()
 })
 
-test('acquire', function (t) {
+test('acquire error', function (t) {
   var pool = new LRU({
     create: function () {}
   })
 
   t.throws(function () {
     pool.acquire('key', 'obj')
-  }, 'Callback must be a function')
+  }, /Callback must be a function/)
+
+  t.end()
+})
+
+test('acquireOnce error', function (t) {
+  var pool = new LRU({
+    create: function () {}
+  })
+
+  t.throws(function () {
+    pool.acquireOnce('key', 'obj')
+  }, /Callback must be a function/)
 
   t.end()
 })
@@ -52,7 +65,7 @@ test('create', function (t) {
   })
 
   pool.acquire('key', function (err, key, obj) {
-    t.equal(err, null)
+    t.error(err)
     t.equal(obj, 'obj')
     t.equal(pool.length, 1)
     t.equal(pool.max, 10)
@@ -238,6 +251,34 @@ test('reinitialize recycled object', function (t) {
         t.equal(pool.length, 2)
         t.end()
       })
+    })
+  })
+})
+
+test('acquireOnce', function (t) {
+  var i = 0
+
+  var pool = new LRU({
+    create: function (cb) { cb(null, {}) },
+    init: function (key, obj, cb) {
+      obj.val = ++i
+      cb(null, obj)
+    }
+  })
+
+  pool.acquireOnce('a', function (err, key, obj) {
+    t.error(err)
+
+    t.equal(obj.val, 1)
+    pool.release(obj)
+
+    pool.acquire('a', function (err, key, obj) {
+      t.error(err)
+
+      t.equal(obj.val, 2)
+      t.equal(pool.length, 2)
+
+      t.end()
     })
   })
 })
