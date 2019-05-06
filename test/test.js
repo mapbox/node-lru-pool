@@ -4,7 +4,8 @@ var test = require('tap').test
 var LRU = require('../')
 
 test('constructor', function (t) {
-  var err = new Error("Must provide a 'create' function")
+  var err = /Must provide a 'create' function/
+
   t.throws(function () { LRU() }, err)
   t.throws(function () { LRU('') }, err)
   t.throws(function () { LRU({}) }, err)
@@ -16,14 +17,14 @@ test('constructor', function (t) {
       create: function () {},
       init: null
     })
-  }, "'init' must be a function")
+  }, /'init' must be a function/)
 
   t.throws(function () {
     LRU({
       create: function () {},
       destroy: undefined
     })
-  }, "'destroy' must be a function")
+  }, /'destroy' must be a function/)
 
   t.end()
 })
@@ -40,7 +41,7 @@ test('acquire', function (t) {
 
   t.throws(function () {
     pool.acquire('key', 'obj')
-  }, 'Callback must be a function')
+  }, /Callback must be a function/)
 
   t.end()
 })
@@ -52,7 +53,7 @@ test('create', function (t) {
   })
 
   pool.acquire('key', function (err, key, obj) {
-    t.equal(err, null)
+    t.error(err)
     t.equal(obj, 'obj')
     t.equal(pool.length, 1)
     t.equal(pool.max, 10)
@@ -240,6 +241,90 @@ test('reinitialize recycled object', function (t) {
       })
     })
   })
+})
+
+test('expire', function (t) {
+  var i = 0
+
+  var pool = new LRU({
+    create: function (cb) { cb(null, {}) },
+    init: function (key, obj, cb) {
+      obj.val = ++i
+      cb(null, obj)
+    },
+    max: 1
+  })
+
+  pool.acquire('a', function (err, key, a) {
+    t.error(err)
+
+    pool.release(a)
+    pool.expire('a', function (err, key) {
+      t.error(err)
+
+      pool.acquire('a', function (err, key, b) {
+        t.error(err)
+        t.equal(b.val, 2)
+        t.equal(pool.length, 1)
+        t.end()
+      })
+    })
+  })
+})
+
+test('expire without callback', function (t) {
+  var i = 0
+
+  var pool = new LRU({
+    create: function (cb) { cb(null, {}) },
+    init: function (key, obj, cb) {
+      obj.val = ++i
+      cb(null, obj)
+    },
+    max: 1
+  })
+
+  pool.acquire('a', function (err, key, a) {
+    t.error(err)
+
+    pool.release(a)
+    pool.expire('a')
+
+    pool.acquire('a', function (err, key, b) {
+      t.error(err)
+      t.equal(b.val, 2)
+      t.equal(pool.length, 1)
+      t.end()
+    })
+  })
+})
+
+test('expire missing', function (t) {
+  var pool = new LRU({
+    create: function (cb) { cb(null, {}) }
+  })
+
+  pool.acquire('a', function (err, key, a) {
+    t.error(err)
+
+    pool.expire('b', function (err, key) {
+      t.error(err)
+      t.equal(pool.length, 1)
+      t.end()
+    })
+  })
+})
+
+test('expire error', function (t) {
+  var pool = new LRU({
+    create: function (cb) { cb(null, {}) }
+  })
+
+  t.throws(function () {
+    pool.expire('a', 'hello')
+  }, /Callback must be a function/)
+
+  t.end()
 })
 
 test('destroy', function (t) {

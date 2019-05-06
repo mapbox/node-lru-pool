@@ -31,6 +31,8 @@ pool.acquire("key", function(err, key, obj) {
   // OR pool.destroy(obj);
 });
 
+pool.expire("key");
+
 // Non-string keys ARE fully supported
 var pool = new LRU({
   create: function(callback) { callback(null, {}) },
@@ -84,6 +86,10 @@ If you put more stuff in it, then least recently used objects will be recycled.
     The acquired object will be flagged as busy and unavailable until it has been released back to the pool.
 
     The key and object can be any value.
+
+* `expire(key, function(err, key) {})`
+
+    Flags all objects matching `key` in the pool as expired. Callback is optional.
 
 * `release(obj)`
 
